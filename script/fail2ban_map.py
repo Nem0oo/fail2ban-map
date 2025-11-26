@@ -85,6 +85,54 @@ def add(ip_address: str, json_file=JSON_FILE) -> None:
 
     _save_json(data, json_file)
 
+def addserver(ip_address: str, json_file=JSON_FILE) -> None:
+    """Adds a new server IP geolocation point to the GeoJSON file."""
+    new_point = find_lat_lng(ip_address)
+    new_point["type"] = "Server"
+
+    data = _load_json(json_file)
+
+    replaced = False
+
+    if data is None:
+        data = {"type": "FeatureCollection", "features": []}
+    else:
+        for i, feature in enumerate(data["features"]):
+            if feature["properties"]["name"] == ip_address:
+                data["features"][i] = new_point
+                replaced = True
+                break
+
+    if not replaced:
+        data["features"].append(new_point)
+
+    _save_json(data, json_file)
+
+def addconnection(ip_address: str, direction: str, port: str, json_file=JSON_FILE) -> None:
+    """Adds a new connection from or to an IP geolocation point to the GeoJSON file."""
+    new_point = find_lat_lng(ip_address)
+    if(direction == "in"):
+        new_point["type"] = "Connection_in"
+    else:
+        new_point["type"] = "Connection_out"
+
+    data = _load_json(json_file)
+
+    replaced = False
+
+    if data is None:
+        data = {"type": "FeatureCollection", "features": []}
+    else:
+        for i, feature in enumerate(data["features"]):
+            if feature["properties"]["name"] == ip_address:
+                data["features"][i] = new_point
+                replaced = True
+                break
+
+    if not replaced:
+        data["features"].append(new_point)
+
+    _save_json(data, json_file)
 
 def remove(ip_address: str, json_file=JSON_FILE) -> None:
     """Removes an IP from the GeoJSON file."""
@@ -122,6 +170,10 @@ if __name__ == "__main__":
         add(sys.argv[2])
     elif len(sys.argv) == 3 and sys.argv[1].lower() == "remove":
         remove(sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1].lower() == "addserver":
+        addserver(sys.argv[2])
+    elif len(sys.argv) == 5 and sys.argv[1].lower() == "addconnection":
+        addconnection(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         print(f"Usage: {os.path.basename(sys.argv[0])} <COMMAND> <IP_ADDRESS>\n"
               f"The commands supported by {os.path.basename(sys.argv[0])} are:\n"

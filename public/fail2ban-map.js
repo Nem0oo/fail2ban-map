@@ -26,6 +26,8 @@ window.onload = async function () {
   // update title
   document.title = document.title + " - " + globalThis.location.hostname;
 
+  serverLatLng = [];
+
   const map = L.map("map", {
     center: [30, 0],
     zoom: 3,
@@ -114,8 +116,9 @@ window.onload = async function () {
       <div class="info-container">
           <img src="./favicon.ico" alt="fail2ban-map icon">
           <div class="banned-count">
-            ${data.features.length} banned IP from<br />
-            ${new Set(data.features.map((feature) => feature.properties.place.split(", ").pop())).size} different countries
+            ${new Set(data.features.filter((feature) => feature.type == "Server")).size} server(s) <br />
+            ${new Set(data.features.filter((feature) => feature.type == "Feature")).size} banned IP from <br />
+            ${new Set(data.features.filter((feature) => feature.type == "Feature").map((feature) => feature.properties.place.split(", ").pop())).size} different countries
           </div>
       </div>
     </div>`);
@@ -125,20 +128,84 @@ window.onload = async function () {
       continue;
     }
 
-    L.canvasMarker(feature.geometry.coordinates.reverse(), {
-      renderer: markerLayer,
-      img: {
-        url: "./assets/img/marker.svg",
-        size: [24, 33],
-        offset: { x: 0, y: -16 },
-      },
-    })
-      .bindTooltip(feature.properties.place, {
-        offset: { x: 12, y: -20 },
+    if (feature.type == "Feature"){
+      L.canvasMarker(feature.geometry.coordinates.reverse(), {
+        renderer: markerLayer,
+        img: {
+          url: "./assets/img/marker.svg",
+          size: [24, 33],
+          offset: { x: 0, y: -16 },
+        },
       })
-      .addTo(map);
+        .bindTooltip(feature.properties.place, {
+          offset: { x: 12, y: -20 },
+        })
+        .addTo(map);
+  
+      heatmapData.push(feature.geometry.coordinates);
 
-    heatmapData.push(feature.geometry.coordinates);
+    }else if (feature.type == "Server"){
+      serverLatLng = feature.geometry.coordinates;
+      L.canvasMarker(feature.geometry.coordinates.reverse(), {
+        renderer: markerLayer,
+        img: {
+          url: "./assets/img/server-rack.svg",
+          size: [24, 33],
+          offset: { x: 0, y: -16 },
+        },
+      })
+        .bindTooltip(feature.properties.place, {
+          offset: { x: 12, y: -20 },
+        })
+        .addTo(map);
+  
+      heatmapData.push(feature.geometry.coordinates);
+    }else if (feature.type == "Connection_in"){
+      L.canvasMarker(feature.geometry.coordinates.reverse(), {
+        renderer: markerLayer,
+        img: {
+          url: "./assets/img/computer.svg",
+          size: [24, 33],
+          offset: { x: 0, y: -16 },
+        },
+      })
+        .bindTooltip(feature.properties.place, {
+          offset: { x: 12, y: -20 },
+        })
+        .addTo(map);
+
+        const arc = arcPoints(serverLatLng, feature.geometry.coordinates);
+
+        L.polyline(arc, {
+          color: "blue",
+          weight: 2,
+          opacity: 0.7
+        }).addTo(map);
+
+    }else if (feature.type == "Connection_out"){
+      L.canvasMarker(feature.geometry.coordinates.reverse(), {
+        renderer: markerLayer,
+        img: {
+          url: "./assets/img/srv-remote.svg",
+          size: [24, 33],
+          offset: { x: 0, y: -16 },
+        },
+      })
+        .bindTooltip(feature.properties.place, {
+          offset: { x: 12, y: -20 },
+        })
+        .addTo(map);
+
+        const arc = arcPoints(serverLatLng, feature.geometry.coordinates);
+
+        L.polyline(arc, {
+            color: "green",
+            weight: 2,
+            opacity: 0.7
+        }).addTo(map);
+    }
+
+    
   }
 
   heatmapLayer.setLatLngs(heatmapData);
